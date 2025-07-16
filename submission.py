@@ -168,8 +168,58 @@ def handle_place_tile(
                     query, tile_in_hand._to_model(), tile_hand_index
                 )
 
-def value_monastaries():
-    pass
+def value_monastaries(game: Game):
+    
+    monasteries = []
+    
+    grid = game.state.map._grid
+
+    for x in range(0,22): # 21 columns
+        for y in range(0,21): # 20 rows
+            tile = grid[y][x]
+
+            if tile is not None and tile.internal_claims[MONASTARY_IDENTIFIER] is not None: 
+                    
+                    # check if tile is a monastery tile
+                    if (tile.tile_id == "A" or tile.tile_id == "B"):
+                        
+                        # check all adjacent tiles
+                            
+                        top_left = grid[y-1][x-1]
+                        top = grid[y-1][x]
+                        top_right = grid[y-1][x+1]
+                        middle_left = grid[y][x-1]
+                        middle_right = grid[y][x+1]
+                        bottom_left = grid[y+1][x-1]
+                        bottom = grid[y+1][x]
+                        bottom_right = grid[y+1][x+1]
+
+                        score = 0
+
+                        if top_left is not None:
+                            score+=1
+                        if top is not None: 
+                            score+=1
+                        if top_right is not None:
+                            score+=1
+                        if middle_left is not None: 
+                            score+=1
+                        if middle_right is not None: 
+                            score+=1
+                        if bottom_left is not None: 
+                            score+=1
+                        if bottom is not None: 
+                            score+=1
+                        if bottom_right is not None: 
+                            score+=1
+
+
+                        # create tuple for this monastery
+
+                        monastery = (score,x,y)
+                        monasteries.append(monastery)
+
+    return monasteries         
 
 def value_cities():
     pass
@@ -187,6 +237,11 @@ def handle_place_meeple(
     Try to place a meeple on the most recently placed tile.
     Priority order: monastery -> Anything else
     """
+
+    print("tiles are\n", flush = True)
+
+    value_monastaries(game)
+
     recent_tile = bot_state.last_tile
     if not recent_tile:
         return game.move_place_meeple_pass(query)
