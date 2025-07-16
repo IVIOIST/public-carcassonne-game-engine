@@ -323,18 +323,20 @@ def value_monastaries(game: Game):
     
     grid = game.state.map._grid
 
-    rows = len(grid)
-    columns = len(grid[0])
 
-    for y in range(rows):
-        for x in range(columns):
+    for y in range(len(grid)):
+        for x in range(len(grid[0])):
             tile = grid[y][x]
+            if tile is None:
+                continue
 
             if tile is not None: 
                     
-                    #and tile.internal_claims[MONASTARY_IDENTIFIER] is not None)
+
                     # check if tile is a monastery tile
-                    if (tile.tile_id == "A" or tile.tile_id == "B" or tile.tile_id == "R8"):
+
+                    if ((tile.tile_type == "A" or tile.tile_type == "B" or tile.tile_type == "R8") and tile.internal_claims[MONASTARY_IDENTIFIER] is not None):
+
                         
                         # check all adjacent tiles
                             
@@ -377,7 +379,6 @@ def value_monastaries(game: Game):
     return monasteries
 
 def value_cities(game: Game):
-    from lib.interact.structure import StructureType
 
     grid = game.state.map._grid
     seen_edges = set()
@@ -444,10 +445,11 @@ def value_cities(game: Game):
                     estimated_score = 1.5 * len(city_tiles)
                     cities.append((estimated_score, grid[y][x]))  # use original starting tile
 
+    cities.sort(key=lambda score: score[0], reverse=True)
+    
     return cities
 
 def value_roads(game: Game):
-    from lib.interact.structure import StructureType
 
     grid = game.state.map._grid
     seen_edges = set()
@@ -524,6 +526,9 @@ def value_roads(game: Game):
                     estimated_score = float(len(road_tiles))  # 1 point per tile
                     roads.append((estimated_score, grid[y][x]))  # start tile
 
+    
+    roads.sort(key=lambda score: score[0], reverse=True)
+
     return roads
 
 def value_fields():
@@ -539,13 +544,18 @@ def handle_place_meeple(
 
     grid = game.state.map._grid
 
-    #monasteries = value_monastaries(game)
-
+    monasteries = value_monastaries(game)
+    
+    print("monastaries are\n",flush = True)
+    print(monasteries,flush = True)
+    print("\n",flush = True)
 
 
     cities = value_cities(game)
 
-
+    print("cities are\n",flush = True)
+    print(cities,flush = True)
+    print("\n",flush = True)
 
     roads = value_roads(game)
 
