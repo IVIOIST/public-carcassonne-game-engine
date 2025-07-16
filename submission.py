@@ -328,8 +328,75 @@ def value_monastaries(game: Game):
 
     return monasteries         
 
-def value_cities():
-    pass
+def value_cities(game: Game):
+
+    grid = game.state.map._grid
+    seen_edges = set()
+    cities = []
+
+    # Mapping of direction: (dx, dy, opposite_edge)
+    edge_directions = {
+        "top_edge": (0, -1, "bottom_edge"),
+        "bottom_edge": (0, 1, "top_edge"),
+        "left_edge": (-1, 0, "right_edge"),
+        "right_edge": (1, 0, "left_edge"),
+    }
+
+    for y in range(len(grid)):
+        for x in range(len(grid[0])):
+            tile = grid[y][x]
+            if tile is None:
+                continue
+
+            for edge_name in Tile.get_edges():
+                if tile.internal_edges[edge_name] != StructureType.CITY:
+                    continue
+
+                if (x, y, edge_name) in seen_edges:
+                    continue
+
+                # Begin DFS to find all connected city edges
+                stack = [(tile, edge_name)]
+                city_edges = set()
+                city_tiles = set()
+                is_claimed = False
+
+                while stack:
+                    current_tile, current_edge = stack.pop()
+                    cx, cy = current_tile.placed_pos
+
+                    if (cx, cy, current_edge) in seen_edges:
+                        continue
+
+                    seen_edges.add((cx, cy, current_edge))
+                    city_edges.add((cx, cy, current_edge))
+                    city_tiles.add(current_tile)
+
+                    # Skip if any edge has a meeple
+                    if current_tile.internal_claims[current_edge] is not None:
+                        is_claimed = True
+                        break  # no need to continue traversing
+
+                    # Check neighbor in the direction of the edge
+                    dx, dy, opposite_edge = edge_directions[current_edge]
+                    nx, ny = cx + dx, cy + dy
+
+                    if not (0 <= nx < MAX_MAP_LENGTH and 0 <= ny < MAX_MAP_LENGTH):
+                        continue
+
+                    neighbor_tile = grid[ny][nx]
+                    if neighbor_tile is None:
+                        continue
+
+                    if neighbor_tile.internal_edges[opposite_edge] == StructureType.CITY:
+                        stack.append((neighbor_tile, opposite_edge))
+
+                if not is_claimed:
+                    estimated_score = 1.5 * len(city_tiles)
+                    cities.append((estimated_score, tile))
+
+    return cities
+
 
 def value_roads():
     pass
