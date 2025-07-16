@@ -162,17 +162,19 @@ def handle_place_tile(
                     flush=True,
                 )
 
+                print("reached")
 
                 return game.move_place_tile(
                     query, tile_in_hand._to_model(), tile_hand_index
                 )
     else:
-        # Non-river phase strategy - FIXED VERSION
+        # Non-river phase strategy
         best_score = float("-inf")
         best_move = None
         best_tile_index = None
-        best_tile = None
+        best_rotation = None
 
+        # Define a scoring function to evaluate placements
         def evaluate_placement(game, tile, x, y):
             score = 0
             grid = game.state.map._grid
@@ -198,20 +200,17 @@ def handle_place_tile(
             
             for my_edge, (dx, dy, their_edge) in adjacency_map.items():
                 nx, ny = x + dx, y + dy
-                if (0 <= nx < MAX_MAP_LENGTH and 0 <= ny < MAX_MAP_LENGTH and 
-                    grid[ny][nx] is not None):
+                if (0 <= nx < MAX_MAP_LENGTH and 0 <= ny < MAX_MAP_LENGTH and grid[ny][nx] is not None):
                     adjacent_tile = grid[ny][nx]
                     if tile.internal_edges[my_edge] == adjacent_tile.internal_edges[their_edge]:
                         if tile.internal_edges[my_edge] == StructureType.CITY:
-                            score += 10
+                            score += 10  # Cities are high value
                         elif tile.internal_edges[my_edge] == StructureType.ROAD:
-                            score += 5
+                            score += 5   # Roads are medium value
             
             # Count city and road segments on the tile
-            city_count = sum(1 for edge in tile.internal_edges.values() 
-                           if edge == StructureType.CITY)
-            road_count = sum(1 for edge in tile.internal_edges.values() 
-                           if edge == StructureType.ROAD)
+            city_count = sum(1 for edge in tile.internal_edges.values() if edge == StructureType.CITY)
+            road_count = sum(1 for edge in tile.internal_edges.values() if edge == StructureType.ROAD)
             
             score += city_count * 2
             score += road_count
@@ -223,7 +222,9 @@ def handle_place_tile(
             original_rotation = tile_in_hand.rotation
             
             # Try different rotations
-            for rotation in range(4):
+            for _ in range(4):
+                tile_in_hand.rotate_clockwise(1)
+                
                 # Check positions adjacent to existing tiles
                 for placed_tile in game.state.map.placed_tiles:
                     px, py = placed_tile.placed_pos
@@ -232,90 +233,46 @@ def handle_place_tile(
                     for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
                         x, y = px + dx, py + dy
                         
-                        # Check bounds and if position is empty
-                        if (not (0 <= x < MAX_MAP_LENGTH and 0 <= y < MAX_MAP_LENGTH) or 
-                            grid[y][x] is not None):
+                        if not (0 <= x < MAX_MAP_LENGTH and 0 <= y < MAX_MAP_LENGTH) or grid[y][x] is not None:
                             continue
                         
-                        # CRITICAL: Check if this tile placement is actually allowed
-                        if not game.can_place_tile_at(tile_in_hand, x, y):
-                            continue
+                        if game.can_place_tile_at(tile_in_hand, x, y):
+                            score = evaluate_placement(game, tile_in_hand, x, y)
                             
-                        # Additional validation: make sure tile edges match adjacent tiles
-                        placement_valid = True
-                        adjacency_map = {
-                            "top_edge": (0, -1, "bottom_edge"),
-                            "right_edge": (1, 0, "left_edge"), 
-                            "bottom_edge": (0, 1, "top_edge"),
-                            "left_edge": (-1, 0, "right_edge"),
-                        }
-                        
-                        for my_edge, (dx, dy, their_edge) in adjacency_map.items():
-                            nx, ny = x + dx, y + dy
-                            if (0 <= nx < MAX_MAP_LENGTH and 0 <= ny < MAX_MAP_LENGTH and 
-                                grid[ny][nx] is not None):
-                                adjacent_tile = grid[ny][nx]
-                                if (tile_in_hand.internal_edges[my_edge] != 
-                                    adjacent_tile.internal_edges[their_edge]):
-                                    placement_valid = False
-                                    break
-                        
-                        if not placement_valid:
-                            continue
-                            
-                        score = evaluate_placement(game, tile_in_hand, x, y)
-                        
-                        if score > best_score:
-                            best_score = score
-                            best_move = (x, y)
-                            best_tile_index = tile_hand_index
-                            best_tile = tile_in_hand
-                
-                # Rotate for next iteration
-                tile_in_hand.rotate_clockwise(1)
+                            if score > best_score:
+                                best_score = score
+                                best_move = (x, y)
+                                best_tile_index = tile_hand_index
+                                best_rotation = tile_in_hand.rotation
             
             # Reset rotation to original
-            tile_in_hand.rotation = original_rotation
+            while tile_in_hand.rotation != original_rotation:
+                tile_in_hand.rotate_clockwise(1)
 
         # Use the best move found
-        if best_move and best_tile is not None:
+        if best_move:
             x, y = best_move
+            chosen_tile = game.state.my_tiles[best_tile_index]
             
-            bot_state.last_tile = best_tile
+            # Set rotation to match best found
+            while chosen_tile.rotation != best_rotation:
+                chosen_tile.rotate_clockwise(1)
+            
+            bot_state.last_tile = chosen_tile
             bot_state.last_tile.placed_pos = (x, y)
             
-            print(f"Placing tile at ({x}, {y}) with score {best_score}")
-            return game.move_place_tile(query, best_tile._to_model(), best_tile_index)
-        
+            return game.move_place_tile(query, chosen_tile._to_model(), best_tile_index)
         else:
-            # Fallback: find any valid placement
-            print("No optimal move found, using fallback strategy")
+            # Fallback to first valid move
             for tile_hand_index, tile_in_hand in enumerate(game.state.my_tiles):
-                original_rotation = tile_in_hand.rotation
-                
-                for rotation in range(4):
-                    # Check all positions on the map
+                for _ in range(4):
+                    tile_in_hand.rotate_clockwise(1)
                     for y in range(MAX_MAP_LENGTH):
                         for x in range(MAX_MAP_LENGTH):
-                            if (grid[y][x] is None and 
-                                game.can_place_tile_at(tile_in_hand, x, y)):
-                                
+                            if grid[y][x] is None and game.can_place_tile_at(tile_in_hand, x, y):
                                 bot_state.last_tile = tile_in_hand
                                 bot_state.last_tile.placed_pos = (x, y)
-                                
-                                print(f"Fallback: placing tile at ({x}, {y})")
-                                return game.move_place_tile(
-                                    query, tile_in_hand._to_model(), tile_hand_index
-                                )
-                    
-                    tile_in_hand.rotate_clockwise(1)
-                
-                # Reset rotation
-                tile_in_hand.rotation = original_rotation
-            
-            # Raise exception because its fucked
-            raise Exception("No valid tile placement found!")
- 
+                                return game.move_place_tile(query, tile_in_hand._to_model(), tile_hand_index)
 
 def value_monastaries(game: Game):
     
@@ -555,8 +512,7 @@ def handle_place_meeple(
 
     #highest = max(cities,roads,fields) # get tile with largest value
 
-    # Get the monastery with the highest score (most surrounded)
-    # monastery_highest = monasteries[0]
+    monastery_highest = monasteries[0]
 
     # If the best monastery is better than the highest-valued other structure, prioritize it
     # if monastery_highest[0] > highest[0]:
