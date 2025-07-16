@@ -512,19 +512,17 @@ def handle_place_meeple(
 
     #highest = max(cities,roads,fields) # get tile with largest value
 
-    monastery_highest = monasteries[0]
+    #monastery_highest = monasteries[0]
 
-    # If the best monastery is better than the highest-valued other structure, prioritize it
     # if monastery_highest[0] > highest[0]:
-    #     # Retrieve the tile object for the best monastery
-    #     tile = grid[monastery_highest[2], monastery_highest[1]]
-
-    #     # Place a meeple on the monastery
-    #     return game.move_place_meeple(query, tile._to_model(), MONASTARY_IDENTIFIER)
     
-    # Otherwise, try to place a meeple on the highest-valued structure found
+    #tile = grid[monastery_highest[2], monastery_highest[1]]
+
+    #if tile 
+
+    #return game.move_place_meeple(query, tile._to_model(), MONASTARY_IDENTIFIER)
+    
     # if highest is None: 
-    #     # If there is no valid structure, pass the turn
     #     return game.move_place_meeple_pass(query)
 
     # Retrieve the tile object for the highest-valued structure
