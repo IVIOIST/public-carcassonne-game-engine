@@ -384,13 +384,16 @@ def value_cities(game: Game):
     seen_edges = set()
     cities = []
 
-    # Mapping of edge direction: (dx, dy, opposite_edge)
+    # Edge mapping: where to look and what the neighbor’s edge is
     edge_directions = {
         "top_edge": (0, -1, "bottom_edge"),
         "bottom_edge": (0, 1, "top_edge"),
         "left_edge": (-1, 0, "right_edge"),
         "right_edge": (1, 0, "left_edge"),
     }
+
+    def is_city(structure):
+        return structure == StructureType.CITY
 
     for y in range(len(grid)):
         for x in range(len(grid[0])):
@@ -399,51 +402,46 @@ def value_cities(game: Game):
                 continue
 
             for edge_name in Tile.get_edges():
-                if tile.internal_edges[edge_name] != StructureType.CITY:
+                if not is_city(tile.internal_edges[edge_name]):
                     continue
 
                 if (x, y, edge_name) in seen_edges:
                     continue
 
-                # Start new city group flood-fill
-                stack = [(tile, x, y, edge_name)]
-                city_edges = set()
+                # Begin city flood-fill from (x, y, edge_name)
+                stack = [(x, y, edge_name)]
                 city_tiles = set()
                 is_claimed = False
 
                 while stack:
-                    current_tile, cx, cy, current_edge = stack.pop()
-
-                    if (cx, cy, current_edge) in seen_edges:
+                    cx, cy, edge = stack.pop()
+                    if (cx, cy, edge) in seen_edges:
                         continue
 
-                    seen_edges.add((cx, cy, current_edge))
-                    city_edges.add((cx, cy, current_edge))
+                    seen_edges.add((cx, cy, edge))
+                    current_tile = grid[cy][cx]
                     city_tiles.add((cx, cy))
 
-                    # Check for meeple on this edge
-                    if current_tile.internal_claims[current_edge] is not None:
+                    if current_tile.internal_claims[edge] is not None:
                         is_claimed = True
-                        break  # don't continue this city — it's claimed
+                        break  # Don't include claimed cities
 
-                    # Check neighbor across the current edge
-                    dx, dy, opposite_edge = edge_directions[current_edge]
-                    nx, ny = cx + dx, cy + dy
+                    # Explore across this edge to adjacent tile
+                    if edge in edge_directions:
+                        dx, dy, opp_edge = edge_directions[edge]
+                        nx, ny = cx + dx, cy + dy
 
-                    if not (0 <= nx < MAX_MAP_LENGTH and 0 <= ny < MAX_MAP_LENGTH):
-                        continue
-
-                    neighbor_tile = grid[ny][nx]
-                    if (
-                        neighbor_tile is not None
-                        and neighbor_tile.internal_edges[opposite_edge] == StructureType.CITY
-                        and (nx, ny, opposite_edge) not in seen_edges
-                    ):
-                        stack.append((neighbor_tile, nx, ny, opposite_edge))
+                        if 0 <= nx < MAX_MAP_LENGTH and 0 <= ny < MAX_MAP_LENGTH:
+                            neighbor = grid[ny][nx]
+                            if neighbor is not None:
+                                s1 = current_tile.internal_edges[edge]
+                                s2 = neighbor.internal_edges[opp_edge]
+                                if StructureType.is_compatible(s1, s2):
+                                    stack.append((nx, ny, opp_edge))
 
                 if not is_claimed:
                     estimated_score = 1.5 * len(city_tiles)
-                    cities.append((estimated_score, grid[y][x]))  # use original starting tile
+                    cities.append((estimated_score, grid[y][x]))  # use origin tile as anchor
 
     cities.sort(key=lambda score: score[0], reverse=True)
     
@@ -462,11 +460,11 @@ def value_roads(game: Game):
         "right_edge": (1, 0, "left_edge"),
     }
 
-    def is_road_edge(edge_type):
-        return edge_type in {StructureType.ROAD, StructureType.ROAD_START}
+    def is_road(structure):
+        return structure in {StructureType.ROAD, StructureType.ROAD_START}
 
     def get_road_edges(tile):
-        return [edge for edge in Tile.get_edges() if is_road_edge(tile.internal_edges[edge])]
+        return [e for e in Tile.get_edges() if is_road(tile.internal_edges[e])]
 
     for y in range(len(grid)):
         for x in range(len(grid[0])):
@@ -474,57 +472,51 @@ def value_roads(game: Game):
             if tile is None:
                 continue
 
-            road_edges = get_road_edges(tile)
-
-            for edge_name in road_edges:
+            for edge_name in get_road_edges(tile):
                 if (x, y, edge_name) in seen_edges:
                     continue
 
-                # Start new road segment
-                stack = [(tile, x, y, edge_name)]
-                road_edges_in_segment = set()
+                stack = [(x, y, edge_name)]
                 road_tiles = set()
                 is_claimed = False
 
                 while stack:
-                    current_tile, cx, cy, current_edge = stack.pop()
-
-                    if (cx, cy, current_edge) in seen_edges:
+                    cx, cy, edge = stack.pop()
+                    if (cx, cy, edge) in seen_edges:
                         continue
 
-                    seen_edges.add((cx, cy, current_edge))
-                    road_edges_in_segment.add((cx, cy, current_edge))
+                    seen_edges.add((cx, cy, edge))
+                    current_tile = grid[cy][cx]
                     road_tiles.add((cx, cy))
 
-                    if current_tile.internal_claims[current_edge] is not None:
+                    if current_tile.internal_claims[edge] is not None:
                         is_claimed = True
-                        break  # skip entire segment
+                        break
 
-                    connected_edges = get_road_edges(current_tile)
+                    road_edges_here = get_road_edges(current_tile)
 
-                    # If exactly 2 road edges → treat them as internally connected
-                    if len(connected_edges) == 2:
-                        for other_edge in connected_edges:
-                            if other_edge != current_edge and (cx, cy, other_edge) not in seen_edges:
-                                stack.append((current_tile, cx, cy, other_edge))
+                    # Internal connection across the tile (if exactly 2 edges)
+                    if len(road_edges_here) == 2:
+                        for other_edge in road_edges_here:
+                            if other_edge != edge and (cx, cy, other_edge) not in seen_edges:
+                                stack.append((cx, cy, other_edge))
 
                     # External connection to neighbor
-                    if current_edge in edge_directions:
-                        dx, dy, opp_edge = edge_directions[current_edge]
+                    if edge in edge_directions:
+                        dx, dy, opp_edge = edge_directions[edge]
                         nx, ny = cx + dx, cy + dy
 
                         if 0 <= nx < MAX_MAP_LENGTH and 0 <= ny < MAX_MAP_LENGTH:
-                            neighbor_tile = grid[ny][nx]
-                            if (
-                                neighbor_tile is not None and
-                                is_road_edge(neighbor_tile.internal_edges[opp_edge]) and
-                                (nx, ny, opp_edge) not in seen_edges
-                            ):
-                                stack.append((neighbor_tile, nx, ny, opp_edge))
+                            neighbor = grid[ny][nx]
+                            if neighbor is not None:
+                                s1 = current_tile.internal_edges[edge]
+                                s2 = neighbor.internal_edges[opp_edge]
+                                if StructureType.is_compatible(s1, s2):
+                                    stack.append((nx, ny, opp_edge))
 
                 if not is_claimed:
                     estimated_score = float(len(road_tiles))  # 1 point per tile
-                    roads.append((estimated_score, grid[y][x]))  # start tile
+                    roads.append((estimated_score, grid[y][x]))
 
     
     roads.sort(key=lambda score: score[0], reverse=True)
