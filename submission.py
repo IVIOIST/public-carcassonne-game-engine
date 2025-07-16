@@ -326,16 +326,18 @@ def value_monastaries(game: Game):
                         monastery = (score,x,y)
                         monasteries.append(monastery)
 
-    return monasteries         
+    monasteries.sort(key=lambda score: score[0], reverse=True) # get monasteries from highest score to lowest
+
+    return monasteries
 
 def value_cities():
-    pass
+    return None
 
 def value_roads():
-    pass
+    return None
 
 def value_fields():
-    pass
+    return None
 
 def handle_place_meeple(
     game: Game, bot_state: BotState, query: QueryPlaceMeeple
@@ -345,9 +347,25 @@ def handle_place_meeple(
     Priority order: monastery -> Anything else
     """
 
-    print("tiles are\n", flush = True)
+    monasteries = value_monastaries(game)
+    cities = value_cities(game)
+    roads = value_roads(game)
+    fields = value_fields(game)
 
-    value_monastaries(game)
+    highest = max(cities,roads,fields) # get tile with largest value
+
+    monastery_highest = monasteries[0]
+
+    if monastery_highest[0] > highest[0]:
+        # return query for a monastery
+        return game.move_place_meeple(query, recent_tile._to_model(), edge)
+    
+    # otherwise
+    # return query for highest
+    return game.move_place_meeple(query, recent_tile._to_model(), edge)
+
+
+
 
     recent_tile = bot_state.last_tile
     if not recent_tile:
