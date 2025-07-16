@@ -168,11 +168,82 @@ def handle_place_tile(
                     query, tile_in_hand._to_model(), tile_hand_index
                 )
 
+def value_monastaries():
+    pass
+
+def value_cities():
+    pass
+
+def value_roads():
+    pass
+
+def value_fields():
+    pass
 
 def handle_place_meeple(
     game: Game, bot_state: BotState, query: QueryPlaceMeeple
 ) -> MovePlaceMeeplePass | MovePlaceMeeple:
-    pass
+    """
+    Try to place a meeple on the most recently placed tile.
+    Priority order: monastery -> Anything else
+    """
+    recent_tile = bot_state.last_tile
+    if not recent_tile:
+        return game.move_place_meeple_pass(query)
+
+    # Priority order for meeple placement
+    placement_priorities = [
+        MONASTARY_IDENTIFIER,  # monastery
+        "top_edge",
+        "right_edge",
+        "bottom_edge",
+        "left_edge",  # edges
+    ]
+
+    for edge in placement_priorities:
+        # Check if this edge has a valid structure and is unclaimed
+        if edge == MONASTARY_IDENTIFIER:
+            # Check if tile has monastery and it's unclaimed
+            if (
+                hasattr(recent_tile, "modifiers")
+                and any(mod.name == "MONESTERY" for mod in recent_tile.modifiers)
+                and recent_tile.internal_claims.get(MONASTARY_IDENTIFIER) is None
+            ):
+                assert bot_state.last_tile
+                print(
+                    "[ ERROR ] M ",
+                    recent_tile,
+                    edge,
+                    bot_state.last_tile.internal_edges[edge],
+                    flush=True,
+                )
+                return game.move_place_meeple(
+                    query, recent_tile._to_model(), MONASTARY_IDENTIFIER
+                )
+        else:
+            # Check if edge has a claimable structure
+            assert bot_state.last_tile
+            structures = list(
+                game.state.get_placeable_structures(bot_state.last_tile._to_model()).items()
+            )
+
+            e, structure = structures[0] if structures else None, None
+
+            if structure and e and recent_tile.internal_claims.get(edge) is None:
+                # Check if the structure is actually unclaimed (not connected to claimed structures)
+                if not game.state._get_claims(recent_tile, e):
+                    print(
+                        "[ ERROR ] ",
+                        recent_tile,
+                        edge,
+                        bot_state.last_tile.internal_edges[edge],
+                        flush=True,
+                    )
+                    return game.move_place_meeple(query, recent_tile._to_model(), edge)
+
+    # No valid placement found, pass
+    print("[ ERROR ] ", flush=True)
+    return game.move_place_meeple_pass(query)
 
 
 if __name__ == "__main__":
