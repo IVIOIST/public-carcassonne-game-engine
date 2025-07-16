@@ -323,21 +323,18 @@ def value_monastaries(game: Game):
     
     grid = game.state.map._grid
 
-
     for y in range(len(grid)):
         for x in range(len(grid[0])):
             tile = grid[y][x]
-            if tile is None:
-                continue
 
             if tile is not None: 
                     
-
                     # check if tile is a monastery tile
 
-                    if ((tile.tile_type == "A" or tile.tile_type == "B" or tile.tile_type == "R8") and tile.internal_claims[MONASTARY_IDENTIFIER] is not None):
+                    if ((tile.tile_type == "A" or tile.tile_type == "B" or tile.tile_type == "R8")and tile.internal_claims[MONASTARY_IDENTIFIER] is None):
 
-                        
+                        print("monastary found",flush = True)
+
                         # check all adjacent tiles
                             
                         top_left = grid[y-1][x-1]
@@ -367,7 +364,6 @@ def value_monastaries(game: Game):
                             score+=1
                         if bottom_right is not None: 
                             score+=1
-
 
                         # create tuple for this monastery
 
