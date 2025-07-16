@@ -288,7 +288,9 @@ def value_monastaries(game: Game):
                     
                     # check if tile is a monastery tile
 
-                    if ((tile.tile_type == "A" or tile.tile_type == "B" or tile.tile_type == "R8")and tile.internal_claims[MONASTARY_IDENTIFIER] is None):
+                    # removed R8 cause it seems invalid?
+
+                    if ((tile.tile_type == "A" or tile.tile_type == "B")and tile.internal_claims[MONASTARY_IDENTIFIER] is None):
 
                         print("monastary found",flush = True)
 
@@ -356,7 +358,14 @@ def value_cities(game: Game):
 
             for edge_name in Tile.get_edges():
                 if not is_city(tile.internal_edges[edge_name]):
+
+                    print(tile.tile_type,flush = True)
+                    print("is not a city",flush = True)
+
                     continue
+                
+                print(tile.tile_type,flush = True)
+                print("is a city",flush = True)
 
                 if (x, y, edge_name) in seen_edges:
                     continue
@@ -512,23 +521,33 @@ def handle_place_meeple(
 
     #highest = max(cities,roads,fields) # get tile with largest value
 
-    #monastery_highest = monasteries[0]
+    if len(monasteries) != 0:
+        monastery_highest = monasteries[0]
+
+        print("wanna place a meeple at \n",flush = True)
+
+        print(monastery_highest,flush= True)
+
+        xcoord = monastery_highest[1]
+        ycoord = monastery_highest[2]
+
+        print(xcoord,flush= True)
+        print(ycoord,flush = True)
+
+        tile = grid[ycoord][xcoord]
+
+        print(tile.tile_type,flush = True)
+
+        return game.move_place_meeple(query, tile._to_model(), MONASTARY_IDENTIFIER)
 
     # if monastery_highest[0] > highest[0]:
     
-    #tile = grid[monastery_highest[2], monastery_highest[1]]
-
-    #if tile 
-
-    #return game.move_place_meeple(query, tile._to_model(), MONASTARY_IDENTIFIER)
-    
     # if highest is None: 
-    #     return game.move_place_meeple_pass(query)
+    
+    return game.move_place_meeple_pass(query)
 
-    # Retrieve the tile object for the highest-valued structure
     # tile = grid[highest[2], highest[1]]
 
-    # Place a meeple on the appropriate edge/structure
     # return game.move_place_meeple(query, tile._to_model(), edge)
 
 
