@@ -47,12 +47,133 @@ def main():
 def handle_place_tile(
     game: Game, bot_state: BotState, query: QueryPlaceTile
 ) -> MovePlaceTile:
-    pass
+
+    grid = game.state.map._grid
+
+    # The direction of placing the tile in reference to the last placed tile
+    directions = {
+        (
+            1,
+            0,
+        ): "left_edge",  # if we place on the right of the target tile, we will have to consider our left_edge of the tile in our hand
+        (
+            0,
+            1,
+        ): "top_edge",  # if we place at the bottom o0f the target tile, we will have to consider the top_edge of
+        (-1, 0): "right_edge",  # left
+        (0, -1): "bottom_edge",  # top
+    }
+    # Will either be the latest tile
+    latest_tile = game.state.map.placed_tiles[-1]
+    latest_pos = latest_tile.placed_pos
+
+    print(game.state.my_tiles)
+
+    # check if in river phase
+
+    for tile_hand_index, tile_in_hand in enumerate(game.state.my_tiles):
+        river_flag = False
+        for find_edge in directions.values():
+            if tile_in_hand.internal_edges[find_edge] == StructureType.RIVER:
+                river_flag = True
+                print("river on tile")
+                break
+    
+
+
+    if river_flag:
+        # Looking at each edge of the target tile and seeing if we can match it
+        for (dx, dy), edge in directions.items():
+            target_x = latest_pos[0] + dx
+            target_y = latest_pos[1] + dy
+
+            # Check bounds
+            if not (0 <= target_x < MAX_MAP_LENGTH and 0 <= target_y < MAX_MAP_LENGTH):
+                continue
+
+            # Check if position is empty
+            if grid[target_y][target_x] is not None:
+                continue
+            
+            print_map(game.state.map._grid, range(75, 96))
+
+            if game.can_place_tile_at(tile_in_hand, target_x, target_y):
+
+                uturn_check = False
+                print(tile_in_hand.internal_edges[edge])
+                if tile_in_hand.internal_edges[edge] != StructureType.RIVER:
+                    continue
+
+                for tile_edge in tile_in_hand.get_edges():
+                    if (
+                        tile_edge == edge
+                        or tile_in_hand.internal_edges[tile_edge]
+                        != StructureType.RIVER
+                    ):
+                        continue
+                    forcast_coordinates_one = {
+                        "top_edge": (0, -1),
+                        "right_edge": (1, 0),
+                        "bottom_edge": (0, 1),
+                        "left_edge": (-1, 0),
+                    }
+
+                    extension = forcast_coordinates_one[tile_edge]
+                    forecast_x = target_x + extension[0]
+                    forecast_y = target_y + extension[1]
+                    print(forecast_x, forecast_y)
+                    for coords in forcast_coordinates_one.values():
+                        checking_x = forecast_x + coords[0]
+                        checking_y = forecast_y + coords[1]
+                        if checking_x != target_x or checking_y != target_y:
+                            if grid[checking_y][checking_x] is not None:
+                                print("direct uturn")
+                                uturn_check = True
+
+                    forcast_coordinates_two = {
+                        "top_edge": (0, -2),
+                        "right_edge": (2, 0),
+                        "bottom_edge": (0, 2),
+                        "left_edge": (-2, 0),
+                    }
+                    extension = forcast_coordinates_two[tile_edge]
+
+                    forecast_x = target_x + extension[0]
+                    forecast_y = target_y + extension[1]
+                    for coords in forcast_coordinates_one.values():
+                        checking_x = forecast_x + coords[0]
+                        checking_y = forecast_y + coords[1]
+                        if grid[checking_y][checking_x] is not None:
+                            print("future uturn")
+                            uturn_check = True
+
+                if uturn_check:
+                    tile_in_hand.rotate_clockwise(1)
+                    if tile_in_hand.internal_edges[edge] != StructureType.RIVER:
+                        tile_in_hand.rotate_clockwise(2)
+                
+                bot_state.last_tile = tile_in_hand
+                bot_state.last_tile.placed_pos = (target_x, target_y)
+                print(
+                    bot_state.last_tile.placed_pos,
+                    tile_hand_index,
+                    tile_in_hand.rotation,
+                    tile_in_hand.tile_type,
+                    flush=True,
+                )
+
+                print("reached")
+
+                return game.move_place_tile(
+                    query, tile_in_hand._to_model(), tile_hand_index
+                )
+
 
 def handle_place_meeple(
     game: Game, bot_state: BotState, query: QueryPlaceMeeple
 ) -> MovePlaceMeeplePass | MovePlaceMeeple:
     pass
+
 
 if __name__ == "__main__":
     main()
