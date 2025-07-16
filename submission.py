@@ -162,7 +162,6 @@ def handle_place_tile(
                     flush=True,
                 )
 
-                print("reached")
 
                 return game.move_place_tile(
                     query, tile_in_hand._to_model(), tile_hand_index
@@ -324,16 +323,18 @@ def value_monastaries(game: Game):
     
     grid = game.state.map._grid
 
-    for y in range(len(grid)):
-        for x in range(len(grid[0])):
-            tile = grid[y][x]
+    rows = len(grid)
+    columns = len(grid[0])
 
+    for y in range(rows):
+        for x in range(columns):
+            tile = grid[y][x]
 
             if tile is not None: 
                     
-
+                    #and tile.internal_claims[MONASTARY_IDENTIFIER] is not None)
                     # check if tile is a monastery tile
-                    if ((tile.tile_id == "A" or tile.tile_id == "B") and tile.internal_claims[MONASTARY_IDENTIFIER] is not None):
+                    if (tile.tile_id == "A" or tile.tile_id == "B" or tile.tile_id == "R8"):
                         
                         # check all adjacent tiles
                             
@@ -537,17 +538,20 @@ def handle_place_meeple(
 
     grid = game.state.map._grid
 
-    monasteries = value_monastaries(game)
+    #monasteries = value_monastaries(game)
 
-    print("monasteries are\n",flush = True)
-    print(monasteries,flush = True)
+
+
+    cities = value_cities(game)
+
+
+
+    roads = value_roads(game)
+
+    print("roads are\n",flush = True)
+    print(roads,flush = True)
     print("\n",flush = True)
 
-    #cities = value_cities(game)
-
-
-
-    #roads = value_roads(game)
     #fields = value_fields(game)
 
     #highest = max(cities,roads,fields) # get tile with largest value
