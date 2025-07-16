@@ -281,14 +281,16 @@ def value_monastaries(game: Game):
     
     grid = game.state.map._grid
 
-    for x in range(0,22): # 21 columns
-        for y in range(0,21): # 20 rows
+    for y in range(len(grid)):
+        for x in range(len(grid[0])):
             tile = grid[y][x]
 
-            if tile is not None and tile.internal_claims[MONASTARY_IDENTIFIER] is not None: 
+
+            if tile is not None: 
                     
+
                     # check if tile is a monastery tile
-                    if (tile.tile_id == "A" or tile.tile_id == "B"):
+                    if ((tile.tile_id == "A" or tile.tile_id == "B") and tile.internal_claims[MONASTARY_IDENTIFIER] is not None):
                         
                         # check all adjacent tiles
                             
@@ -414,23 +416,44 @@ def handle_place_meeple(
     Priority order: monastery -> Anything else
     """
 
+    grid = game.state.map._grid
+
     monasteries = value_monastaries(game)
-    cities = value_cities(game)
-    roads = value_roads(game)
-    fields = value_fields(game)
 
-    highest = max(cities,roads,fields) # get tile with largest value
+    print("monasteries are\n",flush = True)
+    print(monasteries,flush = True)
+    print("\n",flush = True)
 
-    monastery_highest = monasteries[0]
+    #cities = value_cities(game)
 
-    if monastery_highest[0] > highest[0]:
-        # return query for a monastery
-        return game.move_place_meeple(query, recent_tile._to_model(), edge)
+
+
+    #roads = value_roads(game)
+    #fields = value_fields(game)
+
+    #highest = max(cities,roads,fields) # get tile with largest value
+
+    # Get the monastery with the highest score (most surrounded)
+    # monastery_highest = monasteries[0]
+
+    # If the best monastery is better than the highest-valued other structure, prioritize it
+    # if monastery_highest[0] > highest[0]:
+    #     # Retrieve the tile object for the best monastery
+    #     tile = grid[monastery_highest[2], monastery_highest[1]]
+
+    #     # Place a meeple on the monastery
+    #     return game.move_place_meeple(query, tile._to_model(), MONASTARY_IDENTIFIER)
     
-    # otherwise
-    # return query for highest
-    return game.move_place_meeple(query, recent_tile._to_model(), edge)
+    # Otherwise, try to place a meeple on the highest-valued structure found
+    # if highest is None: 
+    #     # If there is no valid structure, pass the turn
+    #     return game.move_place_meeple_pass(query)
 
+    # Retrieve the tile object for the highest-valued structure
+    # tile = grid[highest[2], highest[1]]
+
+    # Place a meeple on the appropriate edge/structure
+    # return game.move_place_meeple(query, tile._to_model(), edge)
 
 
 
