@@ -58,6 +58,13 @@ def main():
         game.send_move(choose_move(query))
 
 
+
+
+
+
+
+### TILE PLACEMENT STRATEGY
+
 def handle_place_tile(
     game: Game, bot_state: BotState, query: QueryPlaceTile
 ) -> MovePlaceTile:
@@ -87,8 +94,6 @@ def handle_place_tile(
         return backup_placement(game, bot_state, query)
 
     return max_query
-
-
 
 def maximize_point_placement(game: Game, bot_state: BotState, query: QueryPlaceTile):
 
@@ -122,7 +127,6 @@ def maximize_point_placement(game: Game, bot_state: BotState, query: QueryPlaceT
         return game.move_place_tile(query, original_tile._to_model(), tile_idx)
     else:
         return None
-
 
 def backup_placement(game: Game, bot_state: BotState, query: QueryPlaceTile):
 
@@ -174,7 +178,6 @@ def backup_placement(game: Game, bot_state: BotState, query: QueryPlaceTile):
     # Tell the game engine to place this tile
     return game.move_place_tile(query, original_tile._to_model(), best_tile_idx)
 
-
 def brute_force_tile(
     game: Game, bot_state: BotState, query: QueryPlaceTile
 ) -> MovePlaceTile:
@@ -213,6 +216,16 @@ def brute_force_tile(
     print("❌ BRUTE FORCE: No valid placement found!", flush=True)
     raise ValueError("No valid tile placement found")
 
+### TILE PLACEMENT STRATEGY
+
+
+
+
+
+
+
+
+### MEEPLE PLACEMENT STRATEGY
 
 def handle_place_meeple(
     game: Game, bot_state: BotState, query: QueryPlaceMeeple
@@ -235,10 +248,26 @@ def handle_place_meeple(
         print(f"❌ [MEEPLE] No meeples left - passing", flush=True)
         return game.move_place_meeple_pass(query)
 
+
     # Find all unclaimed structures
-    available_structures = []
+
     print(f"🎯 [MEEPLE] Checking edges for available structures...", flush=True)
     
+    available_structures = check_valid_meeple_placements(recent_tile,game,bot_state)
+    
+    print(f"🎯 [MEEPLE] Available structures: {available_structures}", flush=True)
+    
+    if not available_structures:
+        print(f"❌ [MEEPLE] No available structures - passing", flush=True)
+        return game.move_place_meeple_pass(query)
+
+    # place meeple on best edge
+    return evaluate_meeple_placements(recent_tile, game, bot_state,available_structures,query)
+
+def check_valid_meeple_placements(recent_tile: Tile, game: Game, bot_state: BotState):
+
+    available_structures = []
+
     # Check edges
     for edge in ["top_edge", "right_edge", "bottom_edge", "left_edge"]:
         print(f"🎯 [MEEPLE] Checking {edge}:", flush=True)
@@ -333,12 +362,10 @@ def handle_place_meeple(
         else:
             print(f"  ❌ {edge} is not available (claimed/river/grass)", flush=True)
     
-    print(f"🎯 [MEEPLE] Available structures: {available_structures}", flush=True)
-    
-    if not available_structures:
-        print(f"❌ [MEEPLE] No available structures - passing", flush=True)
-        return game.move_place_meeple_pass(query)
-    
+    return available_structures
+
+def evaluate_meeple_placements(recent_tile: Tile, game: Game, bot_state: BotState,available_structures, query: QueryPlaceMeeple):
+
     # Evaluate each available structure for point potential
     best_structure = None
     best_points = -999999.0
@@ -412,9 +439,6 @@ def handle_place_meeple(
     else:
         print(f"❌ [MEEPLE] No good structure found - passing", flush=True)
         return game.move_place_meeple_pass(query)
-
-
-
 
 def get_all_valid_placements(game: Game, bot_state: BotState = None) -> List[Tuple[int, object, int, int, int]]:
     """
@@ -494,6 +518,15 @@ def get_all_valid_placements(game: Game, bot_state: BotState = None) -> List[Tup
     print(f"✅ [SEARCH] Found {len(valid_placements)} valid placement options", flush=True)
     return valid_placements
 
+### MEEPLE PLACEMENT STRATEGY
+
+
+
+
+
+
+
+### HELPER FUNCTIONS
 
 def local_can_place_tile_at(game: Game, tile: Tile, x: int, y: int, bot_state: BotState = None) -> bool:
     """
@@ -553,9 +586,6 @@ def local_can_place_tile_at(game: Game, tile: Tile, x: int, y: int, bot_state: B
         return True
     else:
         return False
-
-
-
 
 def get_valid_river_placement(game: Game, bot_state: BotState) -> List[Tuple[int, object, int, int, int]]:
     """
@@ -624,9 +654,6 @@ def get_valid_river_placement(game: Game, bot_state: BotState) -> List[Tuple[int
     print(f"🌊 [RIVER] Found {len(valid_placements)} valid river placements")
     return valid_placements
 
-
-
-
 def local_structure_compatible(structure1: StructureType, structure2: StructureType) -> bool:
     """
     Our own structure compatibility validator - faster than the engine's version
@@ -663,10 +690,6 @@ def river_can_place_tile_at(game: Game, test_tile: Tile, latest_tile: Tile, x: i
     except Exception as e:
         return False
     
-    
-    
-    
-
 def analyze_tile_placement_structures(
     game: Game, 
     tile: Tile, 
@@ -761,7 +784,6 @@ def analyze_tile_placement_structures(
         'structure_details': structure_details
     }
 
-
 def evaluate_tile_placement_for_points(
     game: Game, 
     bot_state: BotState, 
@@ -813,7 +835,6 @@ def evaluate_tile_placement_for_points(
     
     return net_points
 
-
 def calculate_city_modifier_bonus(
     tile: Tile, 
     x: int, 
@@ -845,7 +866,6 @@ def calculate_city_modifier_bonus(
     
     return bonus
 
-
 def has_city_modifier_emblem(tile: Tile, edge: str) -> bool:
     """
     Check if a city edge has a modifier emblem.
@@ -865,7 +885,6 @@ def has_city_modifier_emblem(tile: Tile, edge: str) -> bool:
             return True
     
     return False
-
 
 def find_best_tile_placement_for_points(
     game: Game, 
@@ -914,7 +933,6 @@ def find_best_tile_placement_for_points(
         }
     
     return best_placement
-
 
 def evaluate_tile_placement(
     game: Game, bot_state: BotState, tile, x: int, y: int, rotation: int
@@ -973,9 +991,6 @@ def evaluate_tile_placement(
 
 
     return score
-
-
-
 
 def check_tile_placement_completion(
     game: Game, 
@@ -1094,7 +1109,6 @@ def check_tile_placement_completion(
         'our_uncompleted_points': our_uncompleted_points
     }
 
-
 def is_structure_completed(start_tile: Tile, edge: str, grid: list[list[Tile | None]]) -> bool:
     """
     Check if a structure is completed by checking if ALL edges in the component have external tiles.
@@ -1124,7 +1138,6 @@ def is_structure_completed(start_tile: Tile, edge: str, grid: list[list[Tile | N
     # If all edges have external tiles, the structure is completed
     return True
 
-
 def is_road_properly_completed(component: list[tuple[Tile, str]]) -> bool:
     """
     Check if a road is properly completed by having exactly two start points.
@@ -1140,7 +1153,6 @@ def is_road_properly_completed(component: list[tuple[Tile, str]]) -> bool:
     
     # Road is only completed if it has exactly two start points
     return start_points == 2
-
 
 def traverse_connected_component(
     start_tile: Tile, 
@@ -1225,7 +1237,6 @@ def traverse_connected_component(
     
     return component
 
-
 def get_players_on_structure(start_tile: Tile, edge: str, grid: list[list[Tile | None]]) -> list[int]:
     """
     Get all player IDs who have meeples on a structure.
@@ -1240,7 +1251,6 @@ def get_players_on_structure(start_tile: Tile, edge: str, grid: list[list[Tile |
     
     return list(players)
 
-
 def count_tiles_in_component(start_tile: Tile, edge: str, grid: list[list[Tile | None]]) -> int:
     """
     Count unique tiles in a connected component.
@@ -1251,7 +1261,6 @@ def count_tiles_in_component(start_tile: Tile, edge: str, grid: list[list[Tile |
         unique_tiles.add(tile)
     
     return len(unique_tiles)
-
 
 def get_external_tile(edge: str, pos: tuple[int, int], grid: list[list[Tile | None]]) -> Tile | None:
     """
@@ -1269,7 +1278,6 @@ def get_external_tile(edge: str, pos: tuple[int, int], grid: list[list[Tile | No
         case _:
             return None
 
-
 def get_opposite_edge(edge: str) -> str:
     """
     Get the opposite edge.
@@ -1280,7 +1288,6 @@ def get_opposite_edge(edge: str) -> str:
         "top_edge": "bottom_edge",
         "bottom_edge": "top_edge",
     }[edge]
-
 
 def get_adjacent_edges(edge: str) -> list[str]:
     """
@@ -1293,7 +1300,7 @@ def get_adjacent_edges(edge: str) -> list[str]:
         "bottom_edge": ["left_edge", "right_edge"],
     }[edge]
 
-
+### HELPER FUNCTIONS
 
 if __name__ == "__main__":
     main()
