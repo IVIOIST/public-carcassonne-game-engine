@@ -65,6 +65,7 @@ def main():
         game.send_move(choose_move(query))
 
 
+
 def handle_place_tile(
     game: Game, bot_state: BotState, query: QueryPlaceTile
 ) -> MovePlaceTile:
@@ -73,6 +74,8 @@ def handle_place_tile(
     Tries directions in order: right, bottom, left, top
     """
     grid = game.state.map._grid
+
+
 
     # The direction of placing the tile in reference to the last placed tile
     directions = {
@@ -92,7 +95,6 @@ def handle_place_tile(
     latest_pos = latest_tile.placed_pos
 
     print(game.state.my_tiles)
-    assert latest_pos
 
     # Try to place a tile adjacent to the latest tile
     for tile_hand_index, tile_in_hand in enumerate(game.state.my_tiles):
