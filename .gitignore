@@ -30,6 +30,7 @@ pyrightconfig.json
 
 # udit's specific files
 todo.md
+.ignore/
 
 # Submission files
 **/submission*/

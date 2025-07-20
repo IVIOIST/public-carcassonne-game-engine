@@ -10,7 +10,7 @@ from lib.interface.events.event_game_ended import (
 )
 from lib.interface.events.event_player_bannned import EventPlayerBanned
 from lib.interface.events.event_player_won import EventPlayerWon
-from lib.interface.events.typing import EventType
+from lib.interface.events.typing import EventPlayerMeepleFreed, EventType
 from lib.interface.events.event_game_started import EventGameStarted
 from lib.interface.events.event_river_phase_completed import EventRiverPhaseCompleted
 from lib.interface.events.event_tile_placed import (
@@ -69,6 +69,9 @@ class EventInspector:
                     visualiser_json.append(e)
 
                 case MovePlaceMeeple() as e:
+                    visualiser_json.append(e)
+
+                case EventPlayerMeepleFreed() as e:
                     visualiser_json.append(e)
 
         return RootModel(visualiser_json).model_dump_json()

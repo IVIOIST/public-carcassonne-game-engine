@@ -73,10 +73,3 @@ class GameState(GameLogic):
 
     def finalise_game(self) -> None:
         self.game_over = True
-
-    def _get_player_from_id(self, id: int) -> PlayerState | None:
-        for player in self.players.values():
-            if player.id == id:
-                return player
-
-        return None
