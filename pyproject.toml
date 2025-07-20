@@ -19,5 +19,12 @@ engine = { workspace = true }
 helper = { workspace = true }
 
 [tool.uv]
-dev-dependencies = ["lib", "engine", "helper", "mypy", "pre-commit"]
+dev-dependencies = [
+    "lib",
+ "engine",
+ "helper",
+ "mypy",
+ "pre-commit",
+ "pytest>=8.4.1",
+]
 package = false

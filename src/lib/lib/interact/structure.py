@@ -55,5 +55,6 @@ class StructureType(Enum):
             StructureType.ROAD: [StructureType.ROAD, StructureType.ROAD_START],
             StructureType.ROAD_START: [StructureType.ROAD, StructureType.ROAD_START],
             StructureType.CITY: [StructureType.CITY],
-            # StructureType.GRASS: [StructureType.GRASS],
+            StructureType.RIVER: [StructureType.RIVER],
+            StructureType.GRASS: [StructureType.GRASS],
         }.get(s1, [])

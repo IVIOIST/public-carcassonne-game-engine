@@ -106,6 +106,7 @@ class StateMutator:
             tile = self.state.map.get_tile_by_type(tile_model.tile_type, pop=True)
 
             self.state.my_tiles.append(tile)
+            self.state.players[e.player_id].num_tiles += 1
 
     def _commit_opponent_drew_tiles(self, e: PublicEventPlayerDrewTiles) -> None:
         if e.player_id == self.state.me.player_id:
@@ -134,9 +135,11 @@ class StateMutator:
         assert tile is not None
         tile.internal_claims[e.placed_on] = None
         self.state.players_meeples[e.player_id] += 1
+        self.state.players[e.player_id].points += e.reward
 
         if e.player_id == self.state.me.player_id:
             self.state.me.num_meeples += 1
+            self.state.me.points += e.reward
 
     def _commit_event_starting_tile_placed(self, e: EventStartingTilePlaced) -> None:
         self.state.map.place_river_start(e.tile_placed.pos)
@@ -151,6 +154,8 @@ class StateMutator:
 
         self.state.map._grid[y][x] = tile
         self.state.map.placed_tiles.append(tile)
+        if tile.straight_river():
+            self.state.map.straight_rivers -= 1
         self.state.players[e.player_id].num_tiles -= 1
 
         assert tile.rotation == e.tile.rotation
@@ -197,7 +202,8 @@ class StateMutator:
         pass
 
     def _commit_event_player_turn_started(self, e: EventPlayerTurnStarted) -> None:
-        pass
+        if e.player_id == self.state.turn_order[0]:
+            self.state.round += 1
 
     def _commit_event_player_won(self, e: EventPlayerWon) -> None:
         pass

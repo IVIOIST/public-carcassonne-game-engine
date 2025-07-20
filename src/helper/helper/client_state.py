@@ -25,7 +25,6 @@ class ClientSate(GameLogic):
         self.new_events: int = 0
         self.turn_order: list[int] = []
 
-        self.points = 0
         self.me: PlayerModel
         self.my_tiles: list[Tile] = []
 

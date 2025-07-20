@@ -1,3 +1,6 @@
+from typing import cast
+
+from lib.interact.tile import NO_POINTS, TileModifier, StructureType
 from engine.game.tile_subscriber import MonastaryNeighbourSubsciber
 from engine.state.game_state import GameState
 
@@ -93,68 +96,96 @@ class StateMutator:
 
         self.state.map._grid[move.tile.pos[1]][move.tile.pos[0]] = tile
         self.state.map.placed_tiles.append(tile)
+        if tile.straight_river():
+            self.state.map.straight_rivers -= 1
 
         # Keep track of tile placed for meeple placement
         self.state.tile_placed = tile
         tile.placed_pos = move.tile.pos
 
         # Check for any complete connected componentes
-        completed_components = self.state.check_any_complete(tile)
+        completed_components = self.state.get_completed_components(tile)
 
         player_point_limit = -1
 
+        internal_edges_visited: set[str] = set()
+
         # Check for base/regular connected components
-        for edge in completed_components:
-            reward = self.state._get_reward(tile, edge)
+        for internal_edge, connected_component in completed_components.items():
+            if internal_edge in internal_edges_visited:
+                continue
 
-            self.state.tile_placed_claims.add(edge)
-
-            for player_id in self.state._get_claims(tile, edge):
-                player = self.state._get_player_from_id(player_id)
-
-                if player:
-                    player.points += reward
-
-                    if player.points >= POINT_LIMIT:
-                        player_point_limit = player.id
-
-            meeples_to_return = list(
-                self.state._traverse_connected_component(
-                    tile,
-                    edge,
-                    yield_cond=lambda t, e: t.internal_claims[e] is not None,
-                )
+            unique_connected_tiles = set([t for t, _ in connected_component])
+            # Get number of unique tiles
+            reward = StructureType.get_points(tile.internal_edges[internal_edge]) * len(
+                unique_connected_tiles
             )
 
-            for t, e in meeples_to_return:
-                meeple = t.internal_claims[e]
-                assert meeple is not None
+            for t in unique_connected_tiles:
+                reward = TileModifier.apply_point_modifiers(t.modifiers, reward)
 
-                meeple._free_meeple()
+            players_rewarded: set[int] = set()
+
+            for connected_tile, connected_edge in connected_component:
+                connected_meeple = connected_tile.internal_claims[connected_edge]
+
+                if connected_meeple is None:
+                    continue
+
+                assert connected_meeple.placed
+
+                if connected_meeple.player_id in players_rewarded:
+                    self.commit(
+                        EventPlayerMeepleFreed(
+                            player_id=connected_meeple.player_id,
+                            reward=NO_POINTS,
+                            tile=connected_meeple.placed._to_model(),
+                            placed_on=connected_meeple.placed_edge,
+                        )
+                    )
+                    connected_meeple._free_meeple()
+                    continue
+
+                self.state.players[connected_meeple.player_id].points += reward
                 self.commit(
                     EventPlayerMeepleFreed(
-                        player_id=meeple.player_id,
+                        player_id=connected_meeple.player_id,
                         reward=reward,
-                        tile=t._to_model(),
-                        placed_on=e,
+                        tile=connected_meeple.placed._to_model(),
+                        placed_on=connected_meeple.placed_edge,
                     )
                 )
+                connected_meeple._free_meeple()
+
+                if (
+                    player_point_limit < 0
+                    and self.state.players[connected_meeple.player_id].points
+                    >= POINT_LIMIT
+                ):
+                    player_point_limit = connected_meeple.player_id
+
+                players_rewarded.add(connected_meeple.player_id)
+
+            # If meeples freed -> don't reclaim later
+            if players_rewarded:
+                self.state.tile_placed_claims.add(internal_edge)
+
+            internal_edges_visited.add(internal_edge)
 
         # Check for monastary/special completed componentes
-        for subscibed_complete in self.state.tile_publisher.check_notify(tile):
-            for player_id, reward, t, reward_edge in subscibed_complete._reward():
+        for subscribed_complete in self.state.tile_publisher.check_notify(tile):
+            for player_id, reward, t, reward_edge in subscribed_complete._reward():
                 self.state.players[player_id].points += reward
 
                 if (
                     self.state.players[player_id].points >= POINT_LIMIT
-                    and not player_point_limit
+                    and player_point_limit < 0
                 ):
                     player_point_limit = player_id
 
                 meeple = t.internal_claims[reward_edge]
                 assert meeple is not None
 
-                meeple._free_meeple()
                 self.commit(
                     EventPlayerMeepleFreed(
                         player_id=player_id,
@@ -163,6 +194,7 @@ class StateMutator:
                         placed_on=reward_edge,
                     )
                 )
+                meeple._free_meeple()
 
         if player_point_limit >= 0:
             self.commit(EventGameEndedPointLimitReached(player_id=player_point_limit))
@@ -180,7 +212,9 @@ class StateMutator:
 
         meeple._place_meeple(self.state.tile_placed, move.placed_on)
 
-        completed_components = self.state.check_any_complete(self.state.tile_placed)
+        completed_components = self.state.get_completed_components(
+            self.state.tile_placed
+        )
 
         # This segment checks if player placed a meeple on a completed tile
         if move.placed_on == MONASTARY_IDENTIFIER:
@@ -189,35 +223,63 @@ class StateMutator:
             )
             tile_subsciber.register_to(self.state.tile_publisher, self.state.map._grid)
 
-            for subscibed_complete in self.state.tile_publisher.check_notify(
+            for subscribed_complete in self.state.tile_publisher.check_notify(
                 self.state.tile_placed
             ):
-                for player_id, reward, t, e in subscibed_complete._reward():
-                    self.state.players[player_id].points += reward
-                    assert player_id == move.player_id
+                if not isinstance(subscribed_complete, MonastaryNeighbourSubsciber):
+                    continue
 
-                    meeple = t.internal_claims[e]
-                    assert meeple is not None
+                subscribed_complete = cast(
+                    MonastaryNeighbourSubsciber, subscribed_complete
+                )
 
-                    meeple._free_meeple()
-                    self.commit(
-                        EventPlayerMeepleFreed(
-                            player_id=player_id,
-                            reward=reward,
-                            tile=t._to_model(),
-                            placed_on=e,
-                        )
+                if move.placed_on != subscribed_complete.center:
+                    continue
+
+                rewarded_set = subscribed_complete._reward()
+
+                # In meeple placement phase only one should be rewarded
+                assert len(rewarded_set) == 1
+                player_id, reward, t, e = rewarded_set[0]
+                self.state.players[player_id].points += reward
+
+                meeple = t.internal_claims[e]
+                assert meeple is not None
+                assert player_id == move.player_id
+
+                self.commit(
+                    EventPlayerMeepleFreed(
+                        player_id=player_id,
+                        reward=reward,
+                        tile=t._to_model(),
+                        placed_on=e,
                     )
+                )
+                meeple._free_meeple()
 
         # Check the player completed a reguar component and claimed
         elif move.placed_on in completed_components:
-            player.points += self.state._get_reward(
-                self.state.tile_placed, move.placed_on
+            reward = StructureType.get_points(
+                self.state.tile_placed.internal_edges[move.placed_on]
+            ) * len(set([t for t, _ in completed_components[move.placed_on]]))
+
+            player.points += reward
+            self.commit(
+                EventPlayerMeepleFreed(
+                    player_id=player.id,
+                    reward=reward,
+                    tile=self.state.tile_placed._to_model(),
+                    placed_on=move.placed_on,
+                )
             )
+            meeple._free_meeple()
 
         # Cleanup intermeidate state variables
         self.state.tile_placed = None
         self.state.tile_placed_claims = set()
+
+        if self.state.players[move.player_id].points >= POINT_LIMIT:
+            self.commit(EventGameEndedPointLimitReached(player_id=move.player_id))
 
     def _commit_move_place_meeple_pass(self, move: MovePlaceMeeplePass) -> None:
         # Cleanup intermeidate state variables
