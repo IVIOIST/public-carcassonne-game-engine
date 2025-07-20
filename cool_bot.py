@@ -81,6 +81,17 @@ def handle_place_tile(
     print(f"📊 [TILE] Placed tiles: {len(game.state.map.placed_tiles)}", flush=True)
     print(f"📊 [TILE] My tiles: {[t.tile_type for t in game.state.my_tiles]}", flush=True)
 
+    max_query = maximize_point_placement(game, bot_state, query)
+
+    if max_query is None:
+        return backup_placement(game, bot_state, query)
+
+    return max_query
+
+
+
+def maximize_point_placement(game: Game, bot_state: BotState, query: QueryPlaceTile):
+
     # Try to find the best placement for maximum points first
     print(f"🎯 [TILE] Looking for best point-maximizing placement...")
     best_point_placement = find_best_tile_placement_for_points(game, bot_state)
@@ -109,6 +120,11 @@ def handle_place_tile(
 
         # Tell the game engine to place this tile
         return game.move_place_tile(query, original_tile._to_model(), tile_idx)
+    else:
+        return None
+
+
+def backup_placement(game: Game, bot_state: BotState, query: QueryPlaceTile):
 
     # Fallback to regular evaluation if no high-point placement found
     print(f"📊 [TILE] No high-point placement found, using regular evaluation...")
@@ -157,6 +173,7 @@ def handle_place_tile(
 
     # Tell the game engine to place this tile
     return game.move_place_tile(query, original_tile._to_model(), best_tile_idx)
+
 
 def brute_force_tile(
     game: Game, bot_state: BotState, query: QueryPlaceTile
@@ -649,7 +666,6 @@ def river_can_place_tile_at(game: Game, test_tile: Tile, latest_tile: Tile, x: i
     
     
     
-    
 
 def analyze_tile_placement_structures(
     game: Game, 
@@ -951,7 +967,10 @@ def evaluate_tile_placement(
                 print(f"⚠️ [EVAL] Would free opponent meeples from {edge}")
 
     # Small random factor to break ties
-    score += random.random() * 0.1
+    #score += random.random() * 0.1
+
+    # tiebreaker doesn't seem necessary
+
 
     return score
 
@@ -1273,35 +1292,6 @@ def get_adjacent_edges(edge: str) -> list[str]:
         "top_edge": ["left_edge", "right_edge"],
         "bottom_edge": ["left_edge", "right_edge"],
     }[edge]
-
-
-### NOT USED RN
-
-
-def test_completion_checking(game: Game, tile: Tile, x: int, y: int, rotation: int) -> None:
-    """
-    Test function to demonstrate how to use the completion checking.
-    """
-    print(f"🔍 [TEST] Checking completion for tile {tile.tile_type} at ({x}, {y}) rotation {rotation}")
-    
-    result = check_tile_placement_completion(game, tile, x, y, rotation)
-    
-    if result['completed_structures']:
-        print(f"✅ [TEST] Would complete structures: {result['completed_structures']}")
-        print(f"🏆 [TEST] Our points gained: {result['our_points_gained']}")
-        print(f"💀 [TEST] Opponent points gained: {result['opponent_points_gained']}")
-        
-        for edge in result['completed_structures']:
-            players = result['claiming_players'][edge]
-            details = result['structure_details'][edge]
-            
-            print(f"  📋 [TEST] {edge}:")
-            print(f"    🎯 Type: {details['type']}")
-            print(f"    🧩 Tiles: {details['tiles_count']}")
-            print(f"    🏆 Points: {details['points']}")
-            print(f"    👥 Claiming players: {players}")
-    else:
-        print(f"❌ [TEST] Would not complete any structures")
 
 
 
