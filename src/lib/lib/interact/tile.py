@@ -41,7 +41,7 @@ class TileModifier(Enum):
     @final
     @staticmethod
     def apply_point_modifiers(
-        mods: list["TileModifier"], points: int, partial: bool = False
+        tile: "Tile", s: StructureType, points: int, partial: bool = False
     ) -> int:
         def _point_modifier_config(_mod: "TileModifier") -> Callable[[int], int]:
             return {
@@ -55,12 +55,16 @@ class TileModifier(Enum):
                 TileModifier.EMBLEM: lambda x: x + EMBLEM_PARTIAL_POINTS,
             }.get(_mod, lambda x: x + NO_POINTS)
 
-        for mod in mods:
+        def _apply_mod(mod: "TileModifier", partial: bool, points: int) -> int:
             if partial:
-                points = _point_modifier_config_partial(mod)(points)
+                return _point_modifier_config_partial(mod)(points)
 
-            else:
-                points = _point_modifier_config(mod)(points)
+            return _point_modifier_config(mod)(points)
+
+        match s:
+            case StructureType.CITY:
+                if TileModifier.EMBLEM in tile.modifiers:
+                    points = _apply_mod(TileModifier.EMBLEM, partial, points)
 
         return points
 

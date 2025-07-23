@@ -100,7 +100,10 @@ class TilePublisherBus:
 
     def check_notify(self, tile: "Tile") -> Iterator[TileSubsciber]:
         assert tile.placed_pos
-        for subsciber in self.watchers.get(tile.placed_pos, []):
+
+        current_subscribers = list(self.watchers.get(tile.placed_pos, []))
+
+        for subsciber in current_subscribers:
             if subsciber.on_tile_changed(tile):
                 for pos_watched in subsciber._watching():
                     self.watchers[pos_watched].remove(subsciber)

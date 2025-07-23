@@ -121,8 +121,10 @@ class StateMutator:
                 unique_connected_tiles
             )
 
+            structure_type = tile.internal_edges[internal_edge]
+
             for t in unique_connected_tiles:
-                reward = TileModifier.apply_point_modifiers(t.modifiers, reward)
+                reward = TileModifier.apply_point_modifiers(t, structure_type, reward)
 
             players_rewarded: set[int] = set()
 
@@ -233,7 +235,8 @@ class StateMutator:
                     MonastaryNeighbourSubsciber, subscribed_complete
                 )
 
-                if move.placed_on != subscribed_complete.center:
+                if move.tile.pos != subscribed_complete.center:
+                    assert False
                     continue
 
                 rewarded_set = subscribed_complete._reward()
