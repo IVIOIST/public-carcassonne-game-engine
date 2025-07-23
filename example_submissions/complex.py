@@ -126,58 +126,9 @@ def handle_place_tile(
 
             if game.can_place_tile_at(tile_in_hand, target_x, target_y):
                 if river_flag:
-                    uturn_check = False
                     print(tile_in_hand.internal_edges[edge])
                     if tile_in_hand.internal_edges[edge] != StructureType.RIVER:
                         continue
-
-                    for tile_edge in tile_in_hand.get_edges():
-                        if (
-                            tile_edge == edge
-                            or tile_in_hand.internal_edges[tile_edge]
-                            != StructureType.RIVER
-                        ):
-                            continue
-                        forcast_coordinates_one = {
-                            "top_edge": (0, -1),
-                            "right_edge": (1, 0),
-                            "bottom_edge": (0, 1),
-                            "left_edge": (-1, 0),
-                        }
-
-                        extension = forcast_coordinates_one[tile_edge]
-                        forecast_x = target_x + extension[0]
-                        forecast_y = target_y + extension[1]
-                        print(forecast_x, forecast_y)
-                        for coords in forcast_coordinates_one.values():
-                            checking_x = forecast_x + coords[0]
-                            checking_y = forecast_y + coords[1]
-                            if checking_x != target_x or checking_y != target_y:
-                                if grid[checking_y][checking_x] is not None:
-                                    print("direct uturn")
-                                    uturn_check = True
-
-                        forcast_coordinates_two = {
-                            "top_edge": (0, -2),
-                            "right_edge": (2, 0),
-                            "bottom_edge": (0, 2),
-                            "left_edge": (-2, 0),
-                        }
-                        extension = forcast_coordinates_two[tile_edge]
-
-                        forecast_x = target_x + extension[0]
-                        forecast_y = target_y + extension[1]
-                        for coords in forcast_coordinates_one.values():
-                            checking_x = forecast_x + coords[0]
-                            checking_y = forecast_y + coords[1]
-                            if grid[checking_y][checking_x] is not None:
-                                print("future uturn")
-                                uturn_check = True
-
-                    if uturn_check:
-                        tile_in_hand.rotate_clockwise(1)
-                        if tile_in_hand.internal_edges[edge] != StructureType.RIVER:
-                            tile_in_hand.rotate_clockwise(2)
 
                 bot_state.last_tile = tile_in_hand
                 bot_state.last_tile.placed_pos = (target_x, target_y)
@@ -294,9 +245,6 @@ def brute_force_tile(
     game: Game, bot_state: BotState, query: QueryPlaceTile
 ) -> MovePlaceTile:
     grid = game.state.map._grid
-    height = len(grid)
-    width = len(grid[0]) if height > 0 else 0
-
     directions = {
         (0, 1): "top",
         (1, 0): "right",
@@ -310,8 +258,8 @@ def brute_force_tile(
 
     # assert bot_state.last_tile
 
-    for y in range(height):
-        for x in range(width):
+    for y in range(70, 90):
+        for x in range(70, 90):
             if grid[y][x] is not None:
                 print(f"Checking if tile can be placed near tile - {grid[y][x]}")
                 for tile_index, tile in enumerate(game.state.my_tiles):

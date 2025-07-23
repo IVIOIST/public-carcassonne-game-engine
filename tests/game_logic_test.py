@@ -1,6 +1,9 @@
 import unittest
 
 from engine.state.game_state import GameState
+from engine.game.tile_subscriber import MonastaryNeighbourSubsciber, TilePublisherBus
+
+from lib.config.map_config import MONASTARY_IDENTIFIER
 from lib.interact.map import Map
 from lib.interact.structure import StructureType
 from lib.interact.tile import Tile, TileModifier
@@ -93,9 +96,175 @@ class TestPlaceTile(unittest.TestCase):
 
         assert self.state._get_reward(E1, "right_edge") == 8
 
-    @unittest.skip("Not implmented")
-    def test_basic_monastarty(self) -> None:
-        pass
+    def test_basic_monastary(self) -> None:
+        self.state.start_base_phase()
+        self.publisher = TilePublisherBus()
+
+        E1 = self.state.map.get_tile_by_type("E", pop=True)
+        e1_pos = (85, 84)
+        E1.placed_pos = e1_pos
+        self.state.map._grid[e1_pos[1]][e1_pos[0]] = E1
+
+        E2 = self.state.map.get_tile_by_type("E", pop=True)
+        e2_pos = (86, 85)
+        E2.placed_pos = e2_pos
+        E2.rotate_clockwise(1)
+        self.state.map._grid[e2_pos[1]][e2_pos[0]] = E2
+
+        E3 = self.state.map.get_tile_by_type("E", pop=True)
+        e3_pos = (85, 86)
+        E3.placed_pos = e3_pos
+        E3.rotate_clockwise(2)
+        self.state.map._grid[e3_pos[1]][e3_pos[0]] = E3
+
+        E4 = self.state.map.get_tile_by_type("E", pop=True)
+        e4_pos = (84, 85)
+        E4.placed_pos = e4_pos
+        E4.rotate_clockwise(3)
+        self.state.map._grid[e4_pos[1]][e4_pos[0]] = E4
+
+        V1 = self.state.map.get_tile_by_type("V", pop=True)
+        v1_pos = (84, 84)
+        V1.placed_pos = v1_pos
+        V1.rotate_clockwise(1)
+        self.state.map._grid[v1_pos[1]][v1_pos[0]] = V1
+
+        V2 = self.state.map.get_tile_by_type("V", pop=True)
+        v2_pos = (86, 84)
+        V2.placed_pos = v2_pos
+        V2.rotate_clockwise(2)
+        self.state.map._grid[v2_pos[1]][v2_pos[0]] = V2
+
+        V3 = self.state.map.get_tile_by_type("V", pop=True)
+        v3_pos = (86, 86)
+        V3.placed_pos = v3_pos
+        V3.rotate_clockwise(3)
+        self.state.map._grid[v3_pos[1]][v3_pos[0]] = V3
+
+        V4 = self.state.map.get_tile_by_type("V", pop=True)
+        v4_pos = (84, 86)
+        V4.placed_pos = v4_pos
+        self.state.map._grid[v4_pos[1]][v4_pos[0]] = V4
+
+        # Mimic MoveMeeplePlace
+        B = self.state.map.get_tile_by_type("B", pop=True)
+        b_pos = (85, 85)
+        B.placed_pos = b_pos
+        self.state.map._grid[b_pos[1]][b_pos[0]] = B
+
+        s = MonastaryNeighbourSubsciber(b_pos, 0, B, MONASTARY_IDENTIFIER)
+        s.register_to(self.publisher, grid=self.state.map._grid)
+
+        subscribers = list(self.publisher.check_notify(B))
+        assert len(subscribers) == 1
+
+        assert subscribers[0]._reward() == [(0, 9, B, MONASTARY_IDENTIFIER)]
+
+        subscribers = list(self.publisher.check_notify(B))
+        assert len(subscribers) == 0
+
+    def test_complex_monastary(self) -> None:
+        self.state.start_base_phase()
+        self.publisher = TilePublisherBus()
+
+        E1 = self.state.map.get_tile_by_type("E", pop=True)
+        e1_pos = (85, 84)
+        E1.placed_pos = e1_pos
+        self.state.map._grid[e1_pos[1]][e1_pos[0]] = E1
+
+        E2 = self.state.map.get_tile_by_type("E", pop=True)
+        e2_pos = (86, 85)
+        E2.placed_pos = e2_pos
+        E2.rotate_clockwise(1)
+        self.state.map._grid[e2_pos[1]][e2_pos[0]] = E2
+
+        E3 = self.state.map.get_tile_by_type("E", pop=True)
+        e3_pos = (85, 86)
+        E3.placed_pos = e3_pos
+        E3.rotate_clockwise(2)
+        self.state.map._grid[e3_pos[1]][e3_pos[0]] = E3
+
+        # Mimic MoveMeeplePlace
+        B1 = self.state.map.get_tile_by_type("B", pop=True)
+        b1_pos = (84, 85)
+        B1.placed_pos = b1_pos
+        self.state.map._grid[b1_pos[1]][b1_pos[0]] = B1
+
+        s = MonastaryNeighbourSubsciber(b1_pos, 1, B1, MONASTARY_IDENTIFIER)
+        s.register_to(self.publisher, grid=self.state.map._grid)
+
+        V1 = self.state.map.get_tile_by_type("V", pop=True)
+        v1_pos = (84, 84)
+        V1.placed_pos = v1_pos
+        V1.rotate_clockwise(1)
+        self.state.map._grid[v1_pos[1]][v1_pos[0]] = V1
+        subscribers = list(self.publisher.check_notify(V1))
+        assert len(subscribers) == 0
+
+        V2 = self.state.map.get_tile_by_type("V", pop=True)
+        v2_pos = (86, 84)
+        V2.placed_pos = v2_pos
+        V2.rotate_clockwise(2)
+        self.state.map._grid[v2_pos[1]][v2_pos[0]] = V2
+        subscribers = list(self.publisher.check_notify(V2))
+        assert len(subscribers) == 0
+
+        V3 = self.state.map.get_tile_by_type("V", pop=True)
+        v3_pos = (86, 86)
+        V3.placed_pos = v3_pos
+        V3.rotate_clockwise(3)
+        self.state.map._grid[v3_pos[1]][v3_pos[0]] = V3
+        subscribers = list(self.publisher.check_notify(V3))
+        assert len(subscribers) == 0
+
+        V4 = self.state.map.get_tile_by_type("V", pop=True)
+        v4_pos = (84, 86)
+        V4.placed_pos = v4_pos
+        self.state.map._grid[v4_pos[1]][v4_pos[0]] = V4
+        subscribers = list(self.publisher.check_notify(V4))
+        assert len(subscribers) == 0
+
+        V5 = self.state.map.get_tile_by_type("V", pop=True)
+        v5_pos = (83, 86)
+        V5.placed_pos = v5_pos
+        V5.rotate_clockwise(2)
+        self.state.map._grid[v5_pos[1]][v5_pos[0]] = V5
+        subscribers = list(self.publisher.check_notify(V5))
+        assert len(subscribers) == 0
+
+        U1 = self.state.map.get_tile_by_type("U", pop=True)
+        u1_pos = (83, 85)
+        U1.placed_pos = u1_pos
+        self.state.map._grid[u1_pos[1]][u1_pos[0]] = U1
+        subscribers = list(self.publisher.check_notify(U1))
+        assert len(subscribers) == 0
+
+        P1 = self.state.map.get_tile_by_type("U", pop=True)
+        p1_pos = (83, 84)
+        P1.placed_pos = p1_pos
+        self.state.map._grid[p1_pos[1]][p1_pos[0]] = P1
+        subscribers = list(self.publisher.check_notify(P1))
+        assert len(subscribers) == 0
+
+        # Mimic MoveMeeplePlace
+        B2 = self.state.map.get_tile_by_type("B", pop=True)
+        b2_pos = (85, 85)
+        B2.placed_pos = b2_pos
+        self.state.map._grid[b2_pos[1]][b2_pos[0]] = B2
+        subscribers = list(self.publisher.check_notify(B2))
+        assert len(subscribers) == 1
+        assert subscribers[0]._reward() == [(1, 9, B1, MONASTARY_IDENTIFIER)]
+
+        s = MonastaryNeighbourSubsciber(b2_pos, 0, B2, MONASTARY_IDENTIFIER)
+        s.register_to(self.publisher, grid=self.state.map._grid)
+
+        subscribers = list(self.publisher.check_notify(B2))
+        assert len(subscribers) == 1
+
+        assert subscribers[0]._reward() == [(0, 9, B2, MONASTARY_IDENTIFIER)]
+
+        subscribers = list(self.publisher.check_notify(B2))
+        assert len(subscribers) == 0
 
     def test_complex_road_traversal(self) -> None:
         self.state.start_base_phase()
@@ -289,7 +458,9 @@ class TestPlaceTile(unittest.TestCase):
             assert reward == EXPECTED_REWARD_NO_MODS
 
             for t in set([t for t, _ in connected_component]):
-                reward = TileModifier.apply_point_modifiers(t.modifiers, reward)
+                reward = TileModifier.apply_point_modifiers(
+                    t, StructureType.CITY, reward
+                )
 
             assert reward == EXPECTED_REWARD
 

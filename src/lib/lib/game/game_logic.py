@@ -66,7 +66,7 @@ class GameLogic(SharedGameState):
                 total_points += StructureType.get_partial_points(structure_type)
 
             total_points = TileModifier.apply_point_modifiers(
-                connected_tile.modifiers, total_points
+                connected_tile, structure_type, total_points
             )
 
         return total_points

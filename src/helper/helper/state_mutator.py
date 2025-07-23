@@ -169,6 +169,8 @@ class StateMutator:
         tile.placed_pos = x, y
         self.state.map._grid[y][x] = tile
         self.state.map.placed_tiles.append(tile)
+        if tile.straight_river():
+            self.state.map.straight_rivers -= 1
         while tile.rotation != e.tile.rotation:
             tile.rotate_clockwise(1)
 
