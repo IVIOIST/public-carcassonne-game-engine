@@ -7,3 +7,9 @@ For monastaries we check the current scoring potential (how many surrounding til
 Pretty much all of this processing is done in analyze_tile_placement_structures, which analyzes all possible tile placements and returns information pertaining to the value of the placement (as discussed above). The tile with the highest total_potential_points is placed. Then a few more minor heuristics are applied in handle_place_tile (have we placed too many meeples, is the round number less than 10 and we can be more conservative for meeple placement) and the best_edge for the meeple is added to bot_state. handle_place_meeple pretty much places the meeple from recent_tile and best_edge stored in bot_state by handle_place_tile. sometimes best_edge is None if handle_place_tile doesn't think we should place a meeple so then handle_place_meeple passes
 
 It's score efficient cause the analysis function greedily gets the best tile based on our heuristics (the top sorted element of the list returned in analyze_tile_placement_structures) and the best edge as well. It's also time efficient because we aren't doing crazy quadruple nested for loops. lots of if statements and calculations are done which arent time consuming. 
+
+unikeys for pep: 
+kmum0850
+esun0349
+
+Charlie Cassell (dont know his unikey)
